@@ -23,8 +23,8 @@ STARTERS = [
 LINKS = [
     ("LinkedIn", "https://www.linkedin.com/in/arpit-kandari-71b726293"),
     ("GitHub", "https://github.com/Arpit0034"),
-    ("GeeksforGeeks", "https://www.geeksforgeeks.org/user/YOUR_GFG_USERNAME/"),
-    ("HackerRank", "https://www.hackerrank.com/profile/YOUR_HACKERRANK_USERNAME"),
+    ("GeeksforGeeks", "https://www.geeksforgeeks.org/profile/arpitk995i?tab=activity"),
+    ("HackerRank", "https://www.hackerrank.com/profile/Arpit0987"),
     ("LeetCode", "https://leetcode.com/u/Myth001/"),
     ("Email", "mailto:arpitk1105@gmail.com"),
     ("Phone", "tel:+917668115878"),
