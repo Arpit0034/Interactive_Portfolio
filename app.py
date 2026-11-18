@@ -2,6 +2,7 @@
 import html
 import json
 import os
+import uuid
 
 import requests
 import streamlit as st
@@ -91,13 +92,24 @@ st.session_state.setdefault("turns", 0)
 st.session_state.setdefault("effort", "Low")  # answer mode: "Low" or "Medium"
 
 
+# Per-visitor id (kept in the URL so it survives a page refresh). Chats are private to it.
+_uid = st.query_params.get("uid", "")
+if "client_id" not in st.session_state:
+    st.session_state.client_id = _uid if 8 <= len(_uid) <= 64 else uuid.uuid4().hex
+st.query_params["uid"] = st.session_state.client_id
+
+
+def auth_headers() -> dict:
+    return {"X-Client-Id": st.session_state.client_id}
+
+
 def new_chat():
     st.session_state.update(session_id=None, messages=[], turns=0)
 
 
 def open_chat(sid: str):
     try:
-        r = requests.get(f"{API}/chat/{sid}", timeout=10)
+        r = requests.get(f"{API}/chat/{sid}", headers=auth_headers(), timeout=10)
         r.raise_for_status()
     except requests.RequestException:
         st.session_state.flash = "Couldn't load that chat."
@@ -112,7 +124,7 @@ def open_chat(sid: str):
 
 def delete_chat(sid: str):
     try:
-        requests.delete(f"{API}/chat/{sid}", timeout=10)
+        requests.delete(f"{API}/chat/{sid}", headers=auth_headers(), timeout=10)
     except requests.RequestException:
         st.session_state.flash = "Couldn't delete that chat."
         return
@@ -126,7 +138,7 @@ def use_starter(text: str):
 
 def fetch_chats():
     try:
-        r = requests.get(f"{API}/chats", timeout=5)
+        r = requests.get(f"{API}/chats", headers=auth_headers(), timeout=5)
         r.raise_for_status()
         return r.json()["chats"]
     except requests.RequestException:
@@ -139,6 +151,7 @@ def stream_answer(question: str):
     try:
         r = requests.post(
             f"{API}/chat/stream",
+            headers=auth_headers(),
             json={
                 "question": question,
                 "session_id": st.session_state.session_id,

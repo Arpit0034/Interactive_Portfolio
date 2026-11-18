@@ -7,7 +7,7 @@ import sqlite3
 import uuid
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from groq import Groq
 from pydantic import BaseModel, Field
@@ -99,52 +99,60 @@ def init_db():
         db.execute(
             "CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, id)"
         )
+        cols = [r["name"] for r in db.execute("PRAGMA table_info(messages)")]
+        if "owner_id" not in cols:
+            db.execute("ALTER TABLE messages ADD COLUMN owner_id TEXT")
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_messages_owner ON messages(owner_id, session_id, id)"
+        )
 
 
-def get_recent_history(session_id: str, limit: int = MAX_HISTORY_MESSAGES) -> list[dict]:
+def get_recent_history(owner_id: str, session_id: str, limit: int = MAX_HISTORY_MESSAGES) -> list[dict]:
     """Last `limit` messages of a chat, oldest first (what the model needs)."""
     with get_db() as db:
         rows = db.execute(
-            "SELECT role, content FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?",
-            (session_id, limit),
+            "SELECT role, content FROM messages WHERE owner_id = ? AND session_id = ? ORDER BY id DESC LIMIT ?",
+            (owner_id, session_id, limit),
         ).fetchall()
     return [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
 
 
-def get_full_history(session_id: str) -> list[dict]:
+def get_full_history(owner_id: str, session_id: str) -> list[dict]:
     with get_db() as db:
         rows = db.execute(
-            "SELECT role, content, created_at FROM messages WHERE session_id = ? ORDER BY id",
-            (session_id,),
+            "SELECT role, content, created_at FROM messages WHERE owner_id = ? AND session_id = ? ORDER BY id",
+            (owner_id, session_id),
         ).fetchall()
     return [dict(r) for r in rows]
 
 
-def count_turns(session_id: str) -> int:
+def count_turns(owner_id: str, session_id: str) -> int:
     """Number of question/answer pairs already stored for this chat."""
     with get_db() as db:
         row = db.execute(
-            "SELECT COUNT(*) AS n FROM messages WHERE session_id = ? AND role = 'user'",
-            (session_id,),
+            "SELECT COUNT(*) AS n FROM messages WHERE owner_id = ? AND session_id = ? AND role = 'user'",
+            (owner_id, session_id),
         ).fetchone()
     return row["n"]
 
 
-def save_turn(session_id: str, question: str, answer: str):
+def save_turn(owner_id: str, session_id: str, question: str, answer: str):
     with get_db() as db:
         db.executemany(
-            "INSERT INTO messages (session_id, role, content) VALUES (?, ?, ?)",
-            [(session_id, "user", question), (session_id, "assistant", answer)],
+            "INSERT INTO messages (owner_id, session_id, role, content) VALUES (?, ?, ?, ?)",
+            [(owner_id, session_id, "user", question), (owner_id, session_id, "assistant", answer)],
         )
 
 
-def delete_session(session_id: str) -> int:
+def delete_session(owner_id: str, session_id: str) -> int:
     with get_db() as db:
-        cur = db.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+        cur = db.execute(
+            "DELETE FROM messages WHERE owner_id = ? AND session_id = ?", (owner_id, session_id)
+        )
         return cur.rowcount
 
 
-def list_sessions() -> list[dict]:
+def list_sessions(owner_id: str) -> list[dict]:
     with get_db() as db:
         rows = db.execute(
             """
@@ -153,12 +161,14 @@ def list_sessions() -> list[dict]:
                    MIN(created_at) AS started_at,
                    MAX(created_at) AS last_active,
                    (SELECT content FROM messages m2
-                     WHERE m2.session_id = m.session_id AND m2.role = 'user'
+                     WHERE m2.owner_id = m.owner_id AND m2.session_id = m.session_id AND m2.role = 'user'
                      ORDER BY m2.id LIMIT 1) AS first_question
             FROM messages m
+            WHERE m.owner_id = ?
             GROUP BY session_id
             ORDER BY last_active DESC
-            """
+            """,
+            (owner_id,),
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -329,7 +339,14 @@ def home():
     return {"message": "Backend Running"}
 
 
-def prepare_chat(request: ChatRequest) -> tuple[str, str, int]:
+def owner(x_client_id: str | None) -> str:
+    """Validate the per-visitor id sent by the frontend."""
+    if not x_client_id or not (8 <= len(x_client_id) <= 64):
+        raise HTTPException(status_code=400, detail="Missing client id")
+    return x_client_id
+
+
+def prepare_chat(request: ChatRequest, owner_id: str) -> tuple[str, str, int]:
     """Shared validation for /chat and /chat/stream. Runs BEFORE any model call."""
     question = request.question.strip()
     if not question:
@@ -337,7 +354,7 @@ def prepare_chat(request: ChatRequest) -> tuple[str, str, int]:
 
     session_id = request.session_id or str(uuid.uuid4())
 
-    turns_used = count_turns(session_id)
+    turns_used = count_turns(owner_id, session_id)
     if turns_used >= MAX_TURNS_PER_CHAT:
         raise HTTPException(
             status_code=429,
@@ -352,13 +369,14 @@ def sse(payload: dict) -> str:
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
+def chat(request: ChatRequest, x_client_id: str | None = Header(default=None)):
     """Non-streaming: returns the full answer at once."""
-    session_id, question, turns_used = prepare_chat(request)
+    oid = owner(x_client_id)
+    session_id, question, turns_used = prepare_chat(request, oid)
 
-    history = get_recent_history(session_id)
+    history = get_recent_history(oid, session_id)
     answer = ask_question(question, resume_cache["resume"], history, request.effort)
-    save_turn(session_id, question, answer)
+    save_turn(oid, session_id, question, answer)
 
     turns_used += 1
     return ChatResponse(
@@ -370,10 +388,11 @@ def chat(request: ChatRequest):
 
 
 @app.post("/chat/stream")
-def chat_stream(request: ChatRequest):
+def chat_stream(request: ChatRequest, x_client_id: str | None = Header(default=None)):
     """Streaming: sends the answer token by token as Server-Sent Events."""
-    session_id, question, turns_used = prepare_chat(request)  # 400/422/429 are raised here
-    history = get_recent_history(session_id)
+    oid = owner(x_client_id)
+    session_id, question, turns_used = prepare_chat(request, oid)  # 400/422/429 are raised here
+    history = get_recent_history(oid, session_id)
 
     def event_generator():
         yield sse({"type": "meta", "session_id": session_id})
@@ -393,7 +412,7 @@ def chat_stream(request: ChatRequest):
             return
 
         # Reached only if the stream finished (not on client disconnect)
-        save_turn(session_id, question, answer)
+        save_turn(oid, session_id, question, answer)
         used = turns_used + 1
         yield sse({
             "type": "done",
@@ -409,23 +428,23 @@ def chat_stream(request: ChatRequest):
 
 
 @app.get("/chats")
-def all_chats():
-    """Sidebar-style list of all saved conversations."""
-    return {"chats": list_sessions()}
+def all_chats(x_client_id: str | None = Header(default=None)):
+    """Sidebar-style list of this visitor's saved conversations."""
+    return {"chats": list_sessions(owner(x_client_id))}
 
 
 @app.get("/chat/{session_id}")
-def get_chat(session_id: str):
-    """Full saved history of one conversation."""
-    messages = get_full_history(session_id)
+def get_chat(session_id: str, x_client_id: str | None = Header(default=None)):
+    """Full saved history of one conversation (only if it belongs to this visitor)."""
+    messages = get_full_history(owner(x_client_id), session_id)
     if not messages:
         raise HTTPException(status_code=404, detail="Chat not found")
     return {"session_id": session_id, "messages": messages}
 
 
 @app.delete("/chat/{session_id}")
-def reset_chat(session_id: str):
-    deleted = delete_session(session_id)
+def reset_chat(session_id: str, x_client_id: str | None = Header(default=None)):
+    deleted = delete_session(owner(x_client_id), session_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Chat not found")
     return {"message": "Conversation deleted"}
