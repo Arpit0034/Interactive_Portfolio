@@ -27,7 +27,7 @@ DB_PATH = "chat_history.db"
 MAX_HISTORY_MESSAGES = 10  # how many recent messages are sent to the model
 MAX_TURNS_PER_CHAT = 15    # 1 turn = 1 question + 1 answer
 MAX_PROMPT_CHARS = 500     # max length of a single user question
-MAX_ANSWER_TOKENS = 2500   # max length of a single model answer (includes hidden reasoning tokens)
+MAX_ANSWER_TOKENS = 4000   # max length of a single model answer (includes hidden reasoning tokens)
 
 
 # ---------- Schemas ----------
@@ -249,7 +249,8 @@ def projects_context() -> str:
     if not lines:
         return ""
     return (
-        "Projects with links (share a project's GitHub or live link when you discuss it):\n"
+        "Projects. This is the ONLY source for what each project used or did. "
+        "Share a project's GitHub or live link when you discuss it:\n"
         + "\n".join(lines)
     )
 
@@ -259,7 +260,7 @@ def build_system_prompt(resume: Resume) -> str:
 You are an AI assistant representing a job candidate.
 Below is everything you know about the candidate.
 
-{resume.model_dump_json(indent=2)}
+{resume.model_dump_json(indent=2, exclude={"projects"})}
 
 {projects_context()}
 
@@ -285,6 +286,13 @@ Rules:
    like [SkyVidya](https://skyvidya.com). Never write a bare URL, never put
    a URL inside brackets, and never put a dash or punctuation directly after
    a URL.
+11. A skill or tool counts as used in a project ONLY if it appears in that
+   project's description or Stack in the Projects section above. The general
+   skills list is not a per-project list; never attach a skill from it to a
+   project.
+12. When asked about several projects, give 1-2 sentences per project using
+   only that project's own description and stack, and finish every project
+   you start. This overrides rule 7's sentence count.
 """
 
 
