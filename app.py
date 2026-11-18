@@ -6,6 +6,8 @@ import os
 import requests
 import streamlit as st
 
+RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"
+
 API = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 MAX_TURNS = 50  # keep in sync with MAX_TURNS_PER_CHAT in backend/main.py
@@ -32,10 +34,19 @@ LINKS = [
 # Certifications: (name, issuer and year, credential link or "").
 # Example: ("Java Programming Masterclass", "Udemy · 2025", "https://www.udemy.com/certificate/UC-xxxx/")
 CERTIFICATIONS = [
+    ("Certicate of Accomplishment Problem Solving (Basic)", "HackerRank · 2024", "https://www.hackerrank.com/certificates/02ca6263258c"),
+    ("Java Online Course", "GeeksforGeeks· 2025", "https://media.geeksforgeeks.org/courses/certificates/b7ebdcef809bc1a79f67cfa55890b5bc.pdf"),
+    ("Python Essential 1", "Cisco Networking Academy · 2025", "https://www.credly.com/badges/c07ecf2d-2ce9-4a41-9072-5c618b078261/public_url"),
+    ("Spring Boot Course", "Scaler · 2025", "https://moonshot.scaler.com/s/sl/0vzlxrFU4t"),
+    ("Spring Boot 0 - 1 - Beginner", "Coding Shuttle · 2025", "https://drive.google.com/file/d/1AJpA0gh2NItimcaoip_f3cVCGAU7O_2J/view?usp=drive_link"),
+    ("Spring Boot 1 - 100 - Expert", "Coding Shuttle · 2026", "https://drive.google.com/file/d/1PKSHdRm3FGJPU8jeI9DsJpSXZM23X7EV/view?usp=drive_link"),
 ]
-RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"  # lives in backend/
 
-st.set_page_config(page_title="Ask Arpit", page_icon="💬", layout="centered")
+st.set_page_config(
+    page_title="Ask Arpit",
+    page_icon="💬",
+    layout="centered"
+)
 
 
 # ---------- start the FastAPI backend inside this app (single free deployment) ----------
@@ -200,7 +211,7 @@ THEMES = {
     "Violet":   ("🟣 Violet",   True,  "#17132a", "#1f1a38", "#1e1938", "#ece8ff", "#a79fcb", "#332c57", "#a78bfa", "#140d2b"),
     "Amber":    ("🟡 Amber",    True,  "#141210", "#1c1916", "#1e1a16", "#f3ece2", "#a89c8c", "#332d25", "#f59e0b", "#1a1100"),
 }
-DEFAULT_THEME = "Teal"
+DEFAULT_THEME = "Violet"
 
 
 def theme_css(name: str) -> str:
@@ -374,6 +385,8 @@ if tab_certs:
     with tab_certs[0]:
         st.markdown(certification_cards(CERTIFICATIONS), unsafe_allow_html=True)
 
+full = st.session_state.turns >= MAX_TURNS
+
 with tab_chat:
     if "flash" in st.session_state:
         st.warning(st.session_state.pop("flash"))
@@ -388,14 +401,15 @@ with tab_chat:
             for col, s in zip(st.columns(2), STARTERS[i:i + 2]):
                 col.button(s, key=f"starter-{s}", on_click=use_starter, args=(s,), use_container_width=True)
 
-    full = st.session_state.turns >= MAX_TURNS
     if full:
         st.info(f"This chat reached its {MAX_TURNS}-question limit. Start a new chat to keep asking.")
 
-    typed = st.chat_input("Ask about experience, skills, projects…", max_chars=MAX_CHARS, disabled=full)
-    question = typed or st.session_state.pop("pending", None)
+# Top level (no indentation, outside any tab) so Streamlit pins it to the bottom, like ChatGPT
+typed = st.chat_input("Ask about experience, skills, projects…", max_chars=MAX_CHARS, disabled=full)
+question = typed or st.session_state.pop("pending", None)
 
-    if question and not full:
+if question and not full:
+    with tab_chat:
         with st.chat_message("user"):
             st.markdown(question)
         with st.chat_message("assistant"):
@@ -412,6 +426,13 @@ with tab_chat:
 
 # ---------- sidebar (drawn last so a new chat shows up right away) ----------
 with st.sidebar:
+    with st.expander("🎨 Theme", expanded=False):
+        st.radio(
+            "Color theme", list(THEMES), key="theme",
+            format_func=lambda k: THEMES[k][0], label_visibility="collapsed",
+        )
+        st.query_params["theme"] = st.session_state.theme
+
     st.header("Chats")
     st.button("New chat", type="primary", on_click=new_chat, use_container_width=True)
     if st.session_state.turns:
@@ -442,11 +463,3 @@ with st.sidebar:
                 help=f"{c['message_count'] // 2} questions",
             )
             b.button("✕", key=f"del-{sid}", on_click=delete_chat, args=(sid,), help="Delete chat")
-
-    st.divider()
-    with st.expander("🎨 Theme", expanded=False):
-        st.radio(
-            "Color theme", list(THEMES), key="theme",
-            format_func=lambda k: THEMES[k][0], label_visibility="collapsed",
-        )
-        st.query_params["theme"] = st.session_state.theme
