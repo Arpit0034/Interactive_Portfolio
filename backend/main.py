@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
+from typing import Literal
 import json
 import os
 import sqlite3
@@ -23,10 +24,10 @@ model = "openai/gpt-oss-120b"
 
 RESUME_PATH = Path("Arpit_Kandari_Resume_Updated.pdf")
 DB_PATH = "chat_history.db"
-MAX_HISTORY_MESSAGES = 20  # how many recent messages are sent to the model
-MAX_TURNS_PER_CHAT = 50    # 1 turn = 1 question + 1 answer
+MAX_HISTORY_MESSAGES = 10  # how many recent messages are sent to the model
+MAX_TURNS_PER_CHAT = 15    # 1 turn = 1 question + 1 answer
 MAX_PROMPT_CHARS = 500     # max length of a single user question
-MAX_ANSWER_TOKENS = 500    # max length of a single model answer
+MAX_ANSWER_TOKENS = 2500   # max length of a single model answer (includes hidden reasoning tokens)
 
 
 # ---------- Schemas ----------
@@ -53,6 +54,8 @@ class Resume(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=MAX_PROMPT_CHARS)
     session_id: str | None = None
+    # Only low/medium are allowed; "high" is rejected with a 422 to avoid token-limit blowups
+    effort: Literal["low", "medium"] = "low"
 
 
 class ChatResponse(BaseModel):
@@ -251,15 +254,27 @@ Below is everything you know about the candidate.
 {projects_context()}
 
 Rules:
-1. Answer only using this information.
-2. Never hallucinate.
-3. If information is unavailable, say
+1. Answer only using this information. Never hallucinate.
+2. If information is unavailable, say
    "I don't have enough information to answer that."
-4. Be professional.
-5. Answer as if HR is interviewing this candidate.
-6. Ensure response is in paragraph format.
-7. Use the earlier conversation to understand follow-up questions
+3. Be specific, not generic. Always name the actual companies, project
+   names, technologies, tools, numbers and links from the information
+   above instead of describing things in general terms.
+4. Never add tools, methods, responsibilities or achievements that are
+   not listed above, and do not pad the answer with generic skills talk.
+5. Speak as the candidate in first person ("I built...", "I worked on...").
+   Never say "my résumé" or "the résumé".
+6. Answer as if HR is interviewing this candidate, in a professional tone.
+7. Write in paragraph format. Aim for about 4-6 sentences, and go longer
+   only if the user asks for more detail.
+8. Use the earlier conversation to understand follow-up questions
    (e.g. "tell me more about that", "what about his second job?").
+9. Do not use praise words or soft-skill claims (e.g. "strong", "production-grade",
+   "problem-solving") unless they appear in the information above.
+10. When sharing a link, always write it as a Markdown link with a label,
+   like [SkyVidya](https://skyvidya.com). Never write a bare URL, never put
+   a URL inside brackets, and never put a dash or punctuation directly after
+   a URL.
 """
 
 
@@ -271,21 +286,23 @@ def build_messages(question: str, resume: Resume, history: list[dict]) -> list[d
     )
 
 
-def ask_question(question: str, resume: Resume, history: list[dict]) -> str:
+def ask_question(question: str, resume: Resume, history: list[dict], effort: str = "low") -> str:
     response = client.chat.completions.create(
         model=model,
         messages=build_messages(question, resume, history),
         max_completion_tokens=MAX_ANSWER_TOKENS,
+        reasoning_effort=effort,
     )
     return response.choices[0].message.content
 
 
-def ask_question_stream(question: str, resume: Resume, history: list[dict]):
+def ask_question_stream(question: str, resume: Resume, history: list[dict], effort: str = "low"):
     """Yields the answer piece by piece as the model generates it."""
     stream = client.chat.completions.create(
         model=model,
         messages=build_messages(question, resume, history),
         max_completion_tokens=MAX_ANSWER_TOKENS,
+        reasoning_effort=effort,
         stream=True,
     )
     for chunk in stream:
@@ -340,7 +357,7 @@ def chat(request: ChatRequest):
     session_id, question, turns_used = prepare_chat(request)
 
     history = get_recent_history(session_id)
-    answer = ask_question(question, resume_cache["resume"], history)
+    answer = ask_question(question, resume_cache["resume"], history, request.effort)
     save_turn(session_id, question, answer)
 
     turns_used += 1
@@ -363,7 +380,7 @@ def chat_stream(request: ChatRequest):
 
         parts: list[str] = []
         try:
-            for token in ask_question_stream(question, resume_cache["resume"], history):
+            for token in ask_question_stream(question, resume_cache["resume"], history, request.effort):
                 parts.append(token)
                 yield sse({"type": "token", "content": token})
         except Exception:

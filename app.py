@@ -10,7 +10,7 @@ RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"
 
 API = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
-MAX_TURNS = 50  # keep in sync with MAX_TURNS_PER_CHAT in backend/main.py
+MAX_TURNS = 15  # keep in sync with MAX_TURNS_PER_CHAT in backend/main.py
 MAX_CHARS = 500  # keep in sync with MAX_PROMPT_CHARS in backend/main.py
 
 STARTERS = [
@@ -88,6 +88,7 @@ class ApiError(Exception):
 st.session_state.setdefault("session_id", None)
 st.session_state.setdefault("messages", [])  # [{"role", "content"}]
 st.session_state.setdefault("turns", 0)
+st.session_state.setdefault("effort", "Low")  # answer mode: "Low" or "Medium"
 
 
 def new_chat():
@@ -138,7 +139,11 @@ def stream_answer(question: str):
     try:
         r = requests.post(
             f"{API}/chat/stream",
-            json={"question": question, "session_id": st.session_state.session_id},
+            json={
+                "question": question,
+                "session_id": st.session_state.session_id,
+                "effort": st.session_state.effort.lower(),
+            },
             stream=True,
             timeout=120,
         )
@@ -224,7 +229,7 @@ def theme_css(name: str) -> str:
 
 
 STATIC_CSS = """
-.stApp{background:var(--aa-bg)}
+.stApp{background-color:var(--aa-bg);background-image:radial-gradient(ellipse 60% 40% at 15% 0%,color-mix(in srgb,var(--aa-accent) 22%,transparent),transparent 70%),radial-gradient(ellipse 50% 35% at 90% 10%,color-mix(in srgb,var(--aa-accent) 12%,transparent),transparent 70%),radial-gradient(color-mix(in srgb,var(--aa-text) 9%,transparent) 1px,transparent 1px);background-size:auto,auto,26px 26px;background-attachment:fixed}
 [data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{background:var(--aa-side);border-right:1px solid var(--aa-border)}
 .stApp :is(p,li,label,span,h1,h2,h3,h4,h5,h6){color:var(--aa-text)}
@@ -254,10 +259,15 @@ button[kind="secondary"]:hover,[data-testid="stBaseButton-secondary"]:hover{bord
 [data-testid="stChatInput"],[data-testid="stChatInput"]>div,[data-testid="stChatInput"] [data-baseweb]{background:var(--aa-surface)!important}
 [data-testid="stChatInput"] textarea{background:transparent!important;color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
 [data-testid="stChatInput"] textarea::placeholder{color:var(--aa-muted)!important;-webkit-text-fill-color:var(--aa-muted);opacity:1}
-[data-testid="stBottom"]>div,[data-testid="stBottomBlockContainer"]{background:var(--aa-bg)}
+[data-testid="stBottom"]>div,[data-testid="stBottomBlockContainer"]{background:transparent}
 [data-testid="stChatMessage"]{background:var(--aa-surface);border:1px solid var(--aa-border);border-radius:14px}
 [data-baseweb="input"],[data-baseweb="base-input"]{background:var(--aa-surface)!important}
 [data-baseweb="input"] input{color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
+/* links inside chat answers follow the active theme */
+[data-testid="stChatMessage"] a,
+[data-testid="stChatMessageContent"] a,
+[data-testid="stChatMessage"] a:visited{color:var(--aa-accent)!important;font-weight:600;text-decoration:underline!important;text-decoration-color:color-mix(in srgb,var(--aa-accent) 45%,transparent)!important;text-underline-offset:3px;transition:text-decoration-color .15s,opacity .15s}
+[data-testid="stChatMessage"] a:hover{text-decoration-color:var(--aa-accent)!important;opacity:.85}
 /* cards */
 .aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:4px 0 18px}
 .aa-card,.aa-link{border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-surface);transition:transform .15s,box-shadow .15s,border-color .15s}
@@ -432,6 +442,14 @@ with st.sidebar:
             format_func=lambda k: THEMES[k][0], label_visibility="collapsed",
         )
         st.query_params["theme"] = st.session_state.theme
+
+    st.radio(
+        "Answer mode",
+        ["Low", "Medium"],
+        key="effort",
+        horizontal=True,
+        help="Low is faster. Medium thinks longer for more thorough answers.",
+    )
 
     st.header("Chats")
     st.button("New chat", type="primary", on_click=new_chat, use_container_width=True)
