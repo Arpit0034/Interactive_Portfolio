@@ -18,7 +18,7 @@ def clean(text: str) -> str:
 
 RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"
 
-API = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+API = os.getenv("BACKEND_URL", "http://localhost:8001").rstrip("/")
 BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 MAX_TURNS = 15  # keep in sync with MAX_TURNS_PER_CHAT in backend/main.py
 MAX_CHARS = 500  # keep in sync with MAX_PROMPT_CHARS in backend/main.py
@@ -70,7 +70,7 @@ def start_backend():
     import time
 
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--port", "8000"],
+        [sys.executable, "-m", "uvicorn", "main:app", "--port", "8001", "--reload"],
         cwd=BACKEND_DIR,
     )
     for _ in range(90):
