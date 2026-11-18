@@ -5,6 +5,7 @@ import json
 import os
 import sqlite3
 import uuid
+import re
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
@@ -254,13 +255,35 @@ def projects_context() -> str:
         + "\n".join(lines)
     )
 
+PROJECTS_ANSWER = """I'm proudest of five projects.
+
+**LinkedIn Clone** ([GitHub](https://github.com/Arpit0034/LinkedInMicroservice)): a 7-service platform (gateway, user, connections, posts, uploader, notifications, Eureka) with a database per service. The social graph lives in Neo4j, Kafka decouples notifications across 5 topics, and Kubernetes manifests make it GKE-deployable.
+
+**JobChain** ([GitHub](https://github.com/Arpit0034/Winter_Hackathon_Team_Frost)): a blockchain-secured exam management app built with a team of 4 in 36 hours. Papers, answer keys and scores are anchored on Polygon as SHA-256 hashes, so tampering is publicly detectable. It also has marks-anomaly and answer-leak fraud engines.
+
+**Hotel Booking Platform** ([GitHub](https://github.com/Arpit0034)): a multi-module REST API with a Decorator-pattern dynamic pricing engine (base, surge, occupancy, urgency, holiday). Double-booking is prevented with pessimistic row locks and a 10-minute soft reservation, and it has a full Stripe flow with 3-tier RBAC.
+
+**Course Search API** ([GitHub](https://github.com/Arpit0034/Course_Search_App)): an Elasticsearch engine with an 8-parameter filter API, fuzzy search and real-time autocomplete. It is containerized with Docker Compose and auto-indexes on boot.
+
+**Anemia Detection:** a two-stage ML system for detection and WHO-based severity classification on 9,468 patient records. Random Forest reached 99.72% recall on the held-out set and 97.12% on an independent dataset, and it is deployed in an Android app."""
+
+CANNED_ANSWERS = {
+    "tell me about the projects you are proudest of": PROJECTS_ANSWER,
+}
+
+
+def canned_answer(question: str) -> str | None:
+    key = re.sub(r"[^a-z0-9 ]", "", question.lower()).strip()
+    return CANNED_ANSWERS.get(key)
 
 def build_system_prompt(resume: Resume) -> str:
     return f"""
 You are an AI assistant representing a job candidate.
 Below is everything you know about the candidate.
 
-{resume.model_dump_json(indent=2, exclude={"projects"})}
+{resume.model_dump_json(indent=2, exclude={"projects", "skills"})}
+
+General skills (NOT tied to any specific project): {", ".join(resume.skills)}
 
 {projects_context()}
 
@@ -287,9 +310,8 @@ Rules:
    a URL inside brackets, and never put a dash or punctuation directly after
    a URL.
 11. A skill or tool counts as used in a project ONLY if it appears in that
-   project's description or Stack in the Projects section above. The general
-   skills list is not a per-project list; never attach a skill from it to a
-   project.
+   project's description or Stack in the Projects section above. Never
+   attach a skill from the general skills list to a project.
 12. When asked about several projects, give 1-2 sentences per project using
    only that project's own description and stack, and finish every project
    you start. This overrides rule 7's sentence count.
@@ -305,6 +327,9 @@ def build_messages(question: str, resume: Resume, history: list[dict]) -> list[d
 
 
 def ask_question(question: str, resume: Resume, history: list[dict], effort: str = "low") -> str:
+    canned = canned_answer(question)
+    if canned:
+        return canned
     response = client.chat.completions.create(
         model=model,
         messages=build_messages(question, resume, history),
@@ -316,6 +341,10 @@ def ask_question(question: str, resume: Resume, history: list[dict], effort: str
 
 def ask_question_stream(question: str, resume: Resume, history: list[dict], effort: str = "low"):
     """Yields the answer piece by piece as the model generates it."""
+    canned = canned_answer(question)
+    if canned:
+        yield canned
+        return
     stream = client.chat.completions.create(
         model=model,
         messages=build_messages(question, resume, history),
