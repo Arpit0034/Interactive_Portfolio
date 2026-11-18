@@ -6,6 +6,15 @@ import uuid
 
 import requests
 import streamlit as st
+from streamlit_js_eval import streamlit_js_eval
+import re
+
+_ODD_SPACES = re.compile(r"[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]")
+
+
+def clean(text: str) -> str:
+    """Normalize odd Unicode spaces so wrapping and word gaps look uniform."""
+    return _ODD_SPACES.sub(" ", text).replace("\u200b", "")
 
 RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"
 
@@ -92,11 +101,25 @@ st.session_state.setdefault("turns", 0)
 st.session_state.setdefault("effort", "Low")  # answer mode: "Low" or "Medium"
 
 
-# Per-visitor id (kept in the URL so it survives a page refresh). Chats are private to it.
-_uid = st.query_params.get("uid", "")
-if "client_id" not in st.session_state:
-    st.session_state.client_id = _uid if 8 <= len(_uid) <= 64 else uuid.uuid4().hex
-st.query_params["uid"] = st.session_state.client_id
+def get_client_id() -> str:
+    """Per-browser id stored in localStorage, so it survives tabs, refreshes and restarts."""
+    if "client_id" in st.session_state:
+        return st.session_state.client_id
+    stored = streamlit_js_eval(
+        js_expressions="localStorage.getItem('aa_client_id') || ''", key="aa_get_uid"
+    )
+    if stored is None:  # the browser hasn't answered yet; Streamlit reruns automatically
+        st.stop()
+    if len(stored) < 8:  # first visit: create and save an id
+        stored = uuid.uuid4().hex
+        streamlit_js_eval(
+            js_expressions=f"localStorage.setItem('aa_client_id', '{stored}')", key="aa_set_uid"
+        )
+    st.session_state.client_id = stored
+    return stored
+
+
+get_client_id()
 
 
 def auth_headers() -> dict:
@@ -114,7 +137,7 @@ def open_chat(sid: str):
     except requests.RequestException:
         st.session_state.flash = "Couldn't load that chat."
         return
-    msgs = [{"role": m["role"], "content": m["content"]} for m in r.json()["messages"]]
+    msgs = [{"role": m["role"], "content": clean(m["content"])} for m in r.json()["messages"]]
     st.session_state.update(
         session_id=sid,
         messages=msgs,
@@ -177,7 +200,7 @@ def stream_answer(question: str):
         if kind == "meta":
             st.session_state.session_id = ev["session_id"]
         elif kind == "token":
-            yield ev["content"]
+            yield clean(ev["content"])
         elif kind == "error":
             raise ApiError(ev.get("detail", "Generation failed. Please try again."))
         elif kind == "done":
@@ -238,69 +261,213 @@ def theme_css(name: str) -> str:
         f":root{{--aa-bg:{bg};--aa-side:{side};--aa-surface:{surface};--aa-text:{text};"
         f"--aa-muted:{muted};--aa-border:{border};--aa-accent:{accent};--aa-on:{on_accent}}}"
     )
-    return "<style>" + root + STATIC_CSS + "</style>"
-
+    font = "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');"
+    return "<style>" + font + root + STATIC_CSS + "</style>"
 
 STATIC_CSS = """
-.stApp{background-color:var(--aa-bg);background-image:radial-gradient(ellipse 60% 40% at 15% 0%,color-mix(in srgb,var(--aa-accent) 22%,transparent),transparent 70%),radial-gradient(ellipse 50% 35% at 90% 10%,color-mix(in srgb,var(--aa-accent) 12%,transparent),transparent 70%),radial-gradient(color-mix(in srgb,var(--aa-text) 9%,transparent) 1px,transparent 1px);background-size:auto,auto,26px 26px;background-attachment:fixed}
-[data-testid="stHeader"]{background:transparent}
-[data-testid="stSidebar"]{background:var(--aa-side);border-right:1px solid var(--aa-border)}
+html{-webkit-text-size-adjust:100%}
+.stApp{
+  background-color:var(--aa-bg);
+  color:var(--aa-text);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  min-height:100vh;
+  min-height:100dvh;
+  overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 15% 0%,color-mix(in srgb,var(--aa-accent) 10%,transparent),transparent 70%),
+    radial-gradient(ellipse 50% 35% at 90% 10%,color-mix(in srgb,var(--aa-accent) 7%,transparent),transparent 70%);
+  background-attachment:fixed;
+}
+html,body,.stApp,.stApp :is(p,li,label,h1,h2,h3,h4,h5,h6,textarea,input,button,a,td,th){
+  font-family:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif!important;
+}
+.stApp :is(code,pre){font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important}
 .stApp :is(p,li,label,span,h1,h2,h3,h4,h5,h6){color:var(--aa-text)}
 [data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *{color:var(--aa-muted)!important;opacity:1!important}
 [data-testid="stAlert"] [data-testid="stAlertContainer"]{background:var(--aa-surface)!important;border:1px solid var(--aa-border)}
 [data-testid="stAlert"] *{color:var(--aa-text)!important}
 [data-testid="stExpander"] summary{background:var(--aa-surface)!important}
-[data-testid="stExpander"] details{background:var(--aa-surface);border:1px solid var(--aa-border)!important;border-radius:12px}
-.stApp h1{width:fit-content;background:linear-gradient(90deg,var(--aa-text) 30%,var(--aa-accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent!important;font-weight:800}
-/* tabs (new react-aria markup + older baseweb markup) */
+[data-testid="stExpander"] details{background:var(--aa-surface);border:1px solid var(--aa-border)!important;border-radius:14px}
+.stApp h1{font-size:1.9rem;font-weight:700;letter-spacing:-.02em;color:var(--aa-text)}
+
+[data-testid="stHeader"]{height:44px;min-height:44px;background:transparent;z-index:100}
+[data-testid="stSidebarCollapsedControl"],[data-testid="stExpandSidebarButton"]{z-index:1000}
+[data-testid="stMainBlockContainer"],.block-container{max-width:760px;margin-inline:auto;padding:3rem 20px 7rem!important}
+[data-testid="stSidebar"]{background:var(--aa-side);border-right:1px solid var(--aa-border)}
+
+/* tabs */
 [data-testid="stTabs"] [data-orientation="horizontal"]{border-bottom:none!important;box-shadow:none!important}
-[data-testid="stTabs"] [role="tablist"]{gap:6px;padding:6px;background:var(--aa-surface);border:1px solid var(--aa-border)!important;border-radius:16px}
-[role="tab"]{flex:1;justify-content:center;height:auto;padding:9px 14px;border-radius:11px;transition:background .15s}
-[role="tab"] p{font-weight:600;font-size:.95rem}
+[data-testid="stTabs"] [role="tablist"]{display:flex;flex-wrap:nowrap;gap:6px;padding:6px;background:var(--aa-surface);border:1px solid var(--aa-border)!important;border-radius:16px;overflow-x:auto;scrollbar-width:none}
+[data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar{display:none}
+[role="tab"]{flex:1;justify-content:center;height:auto;padding:9px 14px;border-radius:11px;background:transparent;transition:background-color .15s,color .15s}
+[role="tab"] p{font-weight:600;font-size:.95rem;color:var(--aa-text)}
 [role="tab"]:hover{background:color-mix(in srgb,var(--aa-accent) 14%,transparent)}
 [role="tab"][aria-selected="true"]{background:var(--aa-accent)!important}
 [role="tab"][aria-selected="true"] :is(p,span,div){color:var(--aa-on)!important}
 .react-aria-SelectionIndicator,[data-baseweb="tab-highlight"],[data-baseweb="tab-border"]{display:none!important}
 [role="tabpanel"]{padding-top:18px}
+
 /* buttons */
 button[kind="primary"],[data-testid="stBaseButton-primary"]{background:var(--aa-accent)!important;border:1px solid var(--aa-accent)!important}
 button[kind="primary"] *,[data-testid="stBaseButton-primary"] *{color:var(--aa-on)!important}
-button[kind="secondary"],[data-testid="stBaseButton-secondary"]{background:var(--aa-surface)!important;border:1px solid var(--aa-border)!important;transition:border-color .15s}
+button[kind="secondary"],[data-testid="stBaseButton-secondary"]{background:var(--aa-surface)!important;border:1px solid var(--aa-border)!important;transition:border-color .15s,background-color .15s,color .15s}
 button[kind="secondary"]:hover,[data-testid="stBaseButton-secondary"]:hover{border-color:var(--aa-accent)!important}
-/* chat */
-[data-testid="stChatInput"]{background:var(--aa-surface);border:1px solid var(--aa-border);border-radius:14px}
-[data-testid="stChatInput"],[data-testid="stChatInput"]>div,[data-testid="stChatInput"] [data-baseweb]{background:var(--aa-surface)!important}
-[data-testid="stChatInput"] textarea{background:transparent!important;color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
-[data-testid="stChatInput"] textarea::placeholder{color:var(--aa-muted)!important;-webkit-text-fill-color:var(--aa-muted);opacity:1}
-[data-testid="stBottom"]>div,[data-testid="stBottomBlockContainer"]{background:transparent}
-[data-testid="stChatMessage"]{background:var(--aa-surface);border:1px solid var(--aa-border);border-radius:14px}
-[data-baseweb="input"],[data-baseweb="base-input"]{background:var(--aa-surface)!important}
-[data-baseweb="input"] input{color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
-/* links inside chat answers follow the active theme */
-[data-testid="stChatMessage"] a,
-[data-testid="stChatMessageContent"] a,
-[data-testid="stChatMessage"] a:visited{color:var(--aa-accent)!important;font-weight:600;text-decoration:underline!important;text-decoration-color:color-mix(in srgb,var(--aa-accent) 45%,transparent)!important;text-underline-offset:3px;transition:text-decoration-color .15s,opacity .15s}
+.stButton button{min-height:44px;height:auto;padding:12px 14px;border-radius:16px;font-size:.95rem;font-weight:500;line-height:1.35;white-space:normal;text-align:left;justify-content:flex-start;transition:border-color .15s,background-color .15s,color .15s}
+[data-testid="stMainBlockContainer"] .stButton button{justify-content:flex-start;text-align:left}
+[data-testid="stMainBlockContainer"] .stButton button :is(p,div){text-align:left!important;width:100%}
+[data-testid="stMainBlockContainer"] .stButton button p{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+[data-testid="stMainBlockContainer"] .stButton button:hover{border-color:var(--aa-accent)!important}
+
+/* sidebar history */
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]{background:transparent!important;border:none!important;border-radius:10px;text-align:left;justify-content:flex-start;font-weight:450;min-height:44px;padding:10px 12px}
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover{background:color-mix(in srgb,var(--aa-text) 9%,transparent)!important}
+[data-testid="stSidebar"] button p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:.4rem}
+[data-testid="stSidebar"] :is([data-testid="stColumn"],[data-testid="column"]){min-width:0!important}
+[data-testid="stSidebar"] :is([data-testid="stColumn"],[data-testid="column"]):first-child{flex:1 1 auto!important;width:auto!important}
+[data-testid="stSidebar"] :is([data-testid="stColumn"],[data-testid="column"]):last-child{flex:0 0 44px!important;width:44px!important}
+
+/* chat messages */
+[data-testid^="stChatMessageAvatar"]{display:none!important}
+[data-testid="stChatMessage"]{background:transparent!important;border:none!important;border-radius:0;padding:.5rem 0!important;gap:0!important;overflow-wrap:anywhere}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]){width:fit-content;max-width:85%;margin-left:auto;background:var(--aa-surface)!important;border:1px solid var(--aa-border)!important;border-radius:20px 20px 6px 20px;padding:10px 16px!important}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) p{margin:0}
+[data-testid="stChatMessage"] :is(p,li){font-size:16px!important;line-height:1.7;font-weight:400;letter-spacing:-.003em;text-align:left;hyphens:none;word-spacing:normal;overflow-wrap:break-word}
+[data-testid="stChatMessage"] p{margin:0 0 .9em}
+[data-testid="stChatMessage"] p:last-child{margin-bottom:0}
+[data-testid="stChatMessage"] li{margin-bottom:.35em}
+[data-testid="stChatMessage"] :is(ul,ol){padding-left:1.3rem}
+[data-testid="stChatMessage"] strong{font-weight:600}
+[data-testid="stChatMessage"] :is(h1,h2,h3,h4){font-weight:650;letter-spacing:-.01em;margin:1.2rem 0 .5rem;line-height:1.3}
+[data-testid="stChatMessage"] :is(pre,table){overflow-x:auto;max-width:100%}
+[data-testid="stChatMessage"] a,[data-testid="stChatMessageContent"] a,[data-testid="stChatMessage"] a:visited{color:var(--aa-accent)!important;font-weight:600;text-decoration:underline!important;text-decoration-color:color-mix(in srgb,var(--aa-accent) 45%,transparent)!important;text-underline-offset:3px;overflow-wrap:anywhere;transition:text-decoration-color .15s,opacity .15s}
 [data-testid="stChatMessage"] a:hover{text-decoration-color:var(--aa-accent)!important;opacity:.85}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"]{margin-bottom:0!important}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) :is([data-testid="stMarkdownContainer"],[data-testid="stChatMessageContent"]){height:auto!important;min-height:0!important;overflow:visible!important}
+
+/* chat input */
+[data-testid="stChatInput"]{background:var(--aa-surface)!important;border:1px solid var(--aa-border)!important;border-radius:28px!important;min-height:48px;padding:0!important;box-shadow:0 2px 14px color-mix(in srgb,var(--aa-text) 10%,transparent);align-items:center}
+[data-testid="stChatInput"]>div,[data-testid="stChatInput"] [data-baseweb]{background:transparent!important;border:none!important;box-shadow:none!important;outline:none!important;border-radius:28px!important}
+[data-testid="stChatInput"]>div{min-height:0!important;padding:.15rem .3rem .15rem .6rem!important;align-items:center}
+[data-testid="stChatInput"] textarea,[data-testid="stChatInputTextArea"]{background:transparent!important;color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text);font-size:16px!important;line-height:1.4!important;min-height:2.5rem!important;max-height:9rem!important;padding:.6rem .4rem!important;margin:0!important}
+[data-testid="stChatInput"] textarea::placeholder{color:var(--aa-muted)!important;-webkit-text-fill-color:var(--aa-muted);opacity:1}
+[data-testid="stChatInput"] button{width:2.25rem;height:2.25rem;min-height:0;border-radius:50%!important;background:var(--aa-text)!important;padding:0;flex:none;align-self:center;transition:opacity .15s}
+[data-testid="stChatInput"] button:hover{opacity:.9}
+[data-testid="stChatInput"]>div{display:flex!important;align-items:center;width:100%}
+[data-testid="stChatInput"] [data-baseweb]{flex:1 1 auto;width:100%}
+[data-testid="stChatInput"] textarea,[data-testid="stChatInputTextArea"]{width:100%!important;text-align:left!important}
+[data-testid="stChatInput"] button{margin-left:auto}
+[data-testid="stChatInput"] button svg{color:var(--aa-bg)!important;fill:currentColor!important}
+[data-testid="stChatInput"] button:disabled{opacity:.35}
+[data-baseweb="input"],[data-baseweb="base-input"]{background:var(--aa-surface)!important}
+[data-baseweb="input"] input{font-size:16px!important;line-height:1.4;color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
+
+/* bottom bar */
+[data-testid="stBottom"],[data-testid="stBottom"]>div{background:transparent!important}
+[data-testid="stBottom"]>div{background:linear-gradient(to top,var(--aa-bg) 70%,transparent)!important;padding:.6rem 0 max(.7rem,env(safe-area-inset-bottom))!important}
+[data-testid="stBottomBlockContainer"]{max-width:760px!important;margin-inline:auto;padding:0 20px!important}
+
 /* cards */
-.aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:4px 0 18px}
-.aa-card,.aa-link{border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-surface);transition:transform .15s,box-shadow .15s,border-color .15s}
-.aa-card:hover,.aa-link:hover{transform:translateY(-2px);box-shadow:0 8px 22px color-mix(in srgb,var(--aa-accent) 18%,transparent);border-color:var(--aa-accent)}
-.aa-card{padding:18px;display:flex;flex-direction:column;gap:10px}
+.aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:16px;margin:4px 0 18px}
+.aa-card,.aa-link{border:1px solid var(--aa-border);border-radius:16px;background:var(--aa-surface);transition:border-color .15s,box-shadow .15s}
+.aa-card:hover,.aa-link:hover{border-color:var(--aa-accent);box-shadow:0 8px 22px color-mix(in srgb,var(--aa-accent) 18%,transparent)}
+.aa-card{padding:16px;display:flex;flex-direction:column;gap:10px}
 .aa-title{font-size:1.1rem;font-weight:650;line-height:1.3;color:var(--aa-text)}
-.aa-tag{font-size:.78rem;color:var(--aa-muted);margin-top:-6px}
+.aa-tag{font-size:.78rem;color:var(--aa-muted);margin-top:-4px}
 .aa-desc{font-size:.9rem;line-height:1.55;flex:1;color:var(--aa-text);opacity:.92}
 .aa-pills{display:flex;flex-wrap:wrap;gap:6px}
 .aa-pill{font-size:.72rem;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--aa-accent) 14%,transparent);color:var(--aa-accent)!important;border:1px solid color-mix(in srgb,var(--aa-accent) 30%,transparent)}
 .aa-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
-.aa-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--aa-border);font-size:.82rem;text-decoration:none!important;color:var(--aa-text)!important;transition:border-color .15s,color .15s}
+.aa-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:10px 14px;border-radius:12px;border:1px solid var(--aa-border);font-size:.875rem;text-decoration:none!important;color:var(--aa-text)!important;transition:border-color .15s,color .15s,background-color .15s}
 .aa-btn:hover{border-color:var(--aa-accent);color:var(--aa-accent)!important}
 .aa-btn.primary{background:var(--aa-accent);border-color:var(--aa-accent);color:var(--aa-on)!important}
 .aa-btn.primary:hover{opacity:.9;color:var(--aa-on)!important}
-.aa-link{display:flex;align-items:center;gap:14px;padding:14px 16px;text-decoration:none!important;color:var(--aa-text)!important}
+.aa-link{display:flex;align-items:center;gap:14px;min-height:44px;padding:16px;text-decoration:none!important;color:var(--aa-text)!important}
 .aa-link .aa-ico{width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--aa-text) 8%,transparent);color:var(--aa-text)}
 .aa-link .aa-name{font-weight:600;font-size:.98rem;color:var(--aa-text)}
-.aa-link .aa-sub{font-size:.78rem;color:var(--aa-muted);word-break:break-all}
+.aa-link .aa-sub{font-size:.78rem;color:var(--aa-muted);word-break:break-all;overflow-wrap:anywhere}
+
+@media (max-width:640px){
+  .stApp{background-attachment:scroll}
+  [data-testid="stHeader"]{height:44px!important;min-height:44px!important;padding:0 .5rem!important;background:color-mix(in srgb,var(--aa-bg) 82%,transparent)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  [data-testid="stMainBlockContainer"],.block-container{max-width:100%!important;padding:3rem 15px 7rem!important}
+  .stApp h1{font-size:1.75rem!important;line-height:1.15}
+  [data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *{font-size:.85rem!important;line-height:1.4}
+
+  [data-testid="stTabs"] [role="tablist"]{gap:4px;padding:4px;border-radius:14px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  [data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar{display:none}
+  [role="tab"]{flex:1 0 auto;white-space:nowrap;padding:8px 12px;border-radius:10px}
+  [role="tab"] p{font-size:.88rem}
+  [role="tabpanel"]{padding-top:12px}
+
+  [data-testid="stChatMessage"]{padding:.4rem 0!important}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]){max-width:85%;border-radius:20px 20px 6px 20px;padding:10px 16px!important}
+  [data-testid="stChatMessage"] :is(p,li){font-size:16px!important;line-height:1.65}
+  [data-testid="stChatMessage"] :is(h1,h2,h3,h4){font-size:1.1rem!important;line-height:1.35}
+  [data-testid="stChatMessage"] :is(code,pre){font-size:.85rem}
+
+  [data-testid="stBottom"]>div{padding:.6rem 0 max(.7rem,env(safe-area-inset-bottom))!important}
+  [data-testid="stBottomBlockContainer"]{max-width:100%!important;padding:0 15px!important}
+  [data-testid="stChatInput"]{border-radius:26px!important;min-height:48px;padding:0!important;align-items:center}
+  [data-testid="stChatInput"]>div{padding:.15rem .3rem .15rem .6rem!important;align-items:center}
+  [data-testid="stChatInput"] textarea,[data-testid="stChatInputTextArea"]{font-size:16px!important;line-height:1.4!important;min-height:2.5rem!important;max-height:9rem!important;padding:.6rem .4rem!important;margin:0!important}
+  [data-testid="stChatInput"] button{width:2.25rem;height:2.25rem;min-height:0;border-radius:50%;padding:0;flex:none;align-self:center}
+  [data-baseweb="input"] input{font-size:16px!important;line-height:1.4}
+  [data-testid="stChatInput"]>div,[data-testid="stChatInput"] [data-baseweb]{border:none!important;box-shadow:none!important;outline:none!important;background:transparent!important;border-radius:26px!important}
+
+  .stButton button{font-size:.95rem;min-height:44px;height:auto;padding:12px 14px;width:100%}
+  [data-testid="stMainBlockContainer"] .stButton button{white-space:normal;text-align:left;justify-content:flex-start}
+  [data-testid="stMainBlockContainer"] .stButton button p{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+  [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"]{flex-wrap:wrap;gap:.5rem}
+  [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{min-width:100%!important;flex:1 1 100%!important}
+
+  .aa-grid{gap:12px}
+  .aa-card{padding:16px}
+  .aa-title{font-size:1.02rem}
+  .aa-desc{font-size:.92rem}
+  .aa-btn{padding:10px 14px;font-size:.875rem}
+  .aa-link{padding:14px;gap:12px}
+  .aa-link .aa-ico{width:40px;height:40px}
+  .aa-link .aa-name{font-size:.95rem}
+
+  [data-testid="stSidebar"]{width:min(86vw,330px)!important;min-width:0!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}
+}
 """
+
+
+# Optional: serif answers like Claude. Set USE_CLAUDE_STYLE = True to enable.
+CLAUDE_STYLE_CSS = """
+[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) :is(p,li,h1,h2,h3,h4){
+  font-family:'Source Serif 4',Georgia,serif!important;
+}
+[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) :is(p,li){
+  font-size:17px!important;
+  line-height:1.7!important;
+}
+[data-testid="stChatMessage"] :is(code,pre){
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+}
+"""
+
+USE_CLAUDE_STYLE = False
+
+
+def theme_css(name: str) -> str:
+    _, _, bg, side, surface, text, muted, border, accent, on_accent = THEMES.get(name, THEMES[DEFAULT_THEME])
+    root = (
+        f":root{{--aa-bg:{bg};--aa-side:{side};--aa-surface:{surface};--aa-text:{text};"
+        f"--aa-muted:{muted};--aa-border:{border};--aa-accent:{accent};--aa-on:{on_accent}}}"
+    )
+    fonts = (
+        "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
+        "&family=Source+Serif+4:wght@400;600&display=swap');"
+    )
+    extra = CLAUDE_STYLE_CSS if USE_CLAUDE_STYLE else ""
+    return "<style>" + fonts + root + STATIC_CSS + extra + "</style>"
 
 
 def icon_svg(name: str, size: int = 22) -> str:
@@ -428,7 +595,7 @@ with tab_chat:
         st.info(f"This chat reached its {MAX_TURNS}-question limit. Start a new chat to keep asking.")
 
 # Top level (no indentation, outside any tab) so Streamlit pins it to the bottom, like ChatGPT
-typed = st.chat_input("Ask about experience, skills, projects…", max_chars=MAX_CHARS, disabled=full)
+typed = st.chat_input("Ask about Arpit...", max_chars=MAX_CHARS, disabled=full)
 question = typed or st.session_state.pop("pending", None)
 
 if question and not full:
