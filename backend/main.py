@@ -216,12 +216,39 @@ Important rules:
 
 
 # ---------- Chat ----------
+PROJECTS_PATH = Path(__file__).resolve().parent.parent / "projects.json"
+
+
+def projects_context() -> str:
+    """Project list (with links) from projects.json, appended to the system prompt."""
+    try:
+        projects = json.loads(PROJECTS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    lines = []
+    for p in projects:
+        links = [f"GitHub: {p['github']}"] if p.get("github") else []
+        links += [f"{x['label']}: {x['url']}" for x in p.get("live", [])]
+        lines.append(
+            f"- {p['name']} ({p.get('tag', '')}): {p.get('description', '')} "
+            f"Stack: {', '.join(p.get('stack', []))}. " + " | ".join(links)
+        )
+    if not lines:
+        return ""
+    return (
+        "Projects with links (share a project's GitHub or live link when you discuss it):\n"
+        + "\n".join(lines)
+    )
+
+
 def build_system_prompt(resume: Resume) -> str:
     return f"""
 You are an AI assistant representing a job candidate.
 Below is everything you know about the candidate.
 
 {resume.model_dump_json(indent=2)}
+
+{projects_context()}
 
 Rules:
 1. Answer only using this information.
