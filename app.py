@@ -23,8 +23,8 @@ STARTERS = [
 LINKS = [
     ("LinkedIn", "https://www.linkedin.com/in/arpit-kandari-71b726293"),
     ("GitHub", "https://github.com/Arpit0034"),
-    ("GeeksforGeeks", "https://www.geeksforgeeks.org/user/YOUR_GFG_USERNAME/"),
-    ("HackerRank", "https://www.hackerrank.com/profile/YOUR_HACKERRANK_USERNAME"),
+    ("GeeksforGeeks", "https://www.geeksforgeeks.org/profile/arpitk995i?tab=activity"),
+    ("HackerRank", "https://www.hackerrank.com/profile/Arpit0987"),
     ("LeetCode", "https://leetcode.com/u/Myth001/"),
     ("Email", "mailto:arpitk1105@gmail.com"),
     ("Phone", "tel:+917668115878"),
@@ -187,32 +187,85 @@ GLYPHS = {  # 24x24 Material-style glyphs for things without a brand logo
     "README": "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z",
     "Live": "M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z",
 }
-GLYPH_COLORS = {"Phone": "#0a7a6f", "README": "currentColor", "Live": "currentColor"}
+GLYPH_COLORS = {"Phone": "var(--aa-accent)", "README": "currentColor", "Live": "currentColor"}
 
-CSS = """
-<style>
-.aa-row{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 4px}
-.aa-ico-link{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;border:1px solid rgba(128,128,128,.28);background:rgba(128,128,128,.05);color:inherit!important;transition:transform .15s,border-color .15s}
-.aa-ico-link:hover{transform:translateY(-2px);border-color:#0a7a6f}
-.aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:8px 0 18px}
-.aa-card{border:1px solid rgba(128,128,128,.28);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;background:rgba(128,128,128,.04);transition:transform .15s,box-shadow .15s,border-color .15s}
-.aa-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08);border-color:#0a7a6f}
-.aa-title{font-size:1.1rem;font-weight:650;line-height:1.3}
-.aa-tag{font-size:.78rem;opacity:.65;margin-top:-6px}
-.aa-desc{font-size:.9rem;line-height:1.55;flex:1;opacity:.92}
+THEMES = {
+    # name: (label, dark?, bg, sidebar, surface, text, muted, border, accent, text-on-accent)
+    "Teal":     ("🟢 Teal",     False, "#ffffff", "#f6f8f7", "#f6f8f7", "#1f2933", "#6b7780", "#d9e0de", "#0a7a6f", "#ffffff"),
+    "Ocean":    ("🔵 Ocean",    False, "#f5f9ff", "#e8f0fe", "#ffffff", "#1b2a41", "#64748b", "#cfdcf2", "#2563eb", "#ffffff"),
+    "Sunset":   ("🟠 Sunset",   False, "#fff8f2", "#ffece0", "#ffffff", "#3a2418", "#8a6a58", "#f3d6c3", "#e8590c", "#ffffff"),
+    "Rose":     ("🌸 Rose",     False, "#fff6f8", "#ffe7ee", "#ffffff", "#3b1f2b", "#8f6676", "#f4cdd9", "#d6336c", "#ffffff"),
+    "Forest":   ("🌲 Forest",   False, "#f5faf5", "#e6f2e6", "#ffffff", "#1d3123", "#5f7a67", "#cfe3d1", "#2f9e44", "#ffffff"),
+    "Midnight": ("🌙 Midnight", True,  "#0e1117", "#151a23", "#171c26", "#e6e9ef", "#98a2b3", "#2a3140", "#38bdf8", "#04121c"),
+    "Violet":   ("🟣 Violet",   True,  "#17132a", "#1f1a38", "#1e1938", "#ece8ff", "#a79fcb", "#332c57", "#a78bfa", "#140d2b"),
+    "Amber":    ("🟡 Amber",    True,  "#141210", "#1c1916", "#1e1a16", "#f3ece2", "#a89c8c", "#332d25", "#f59e0b", "#1a1100"),
+}
+DEFAULT_THEME = "Teal"
+
+
+def theme_css(name: str) -> str:
+    _, _, bg, side, surface, text, muted, border, accent, on_accent = THEMES.get(name, THEMES[DEFAULT_THEME])
+    root = (
+        f":root{{--aa-bg:{bg};--aa-side:{side};--aa-surface:{surface};--aa-text:{text};"
+        f"--aa-muted:{muted};--aa-border:{border};--aa-accent:{accent};--aa-on:{on_accent}}}"
+    )
+    return "<style>" + root + STATIC_CSS + "</style>"
+
+
+STATIC_CSS = """
+.stApp{background:var(--aa-bg)}
+[data-testid="stHeader"]{background:transparent}
+[data-testid="stSidebar"]{background:var(--aa-side);border-right:1px solid var(--aa-border)}
+.stApp :is(p,li,label,span,h1,h2,h3,h4,h5,h6){color:var(--aa-text)}
+[data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] *{color:var(--aa-muted)!important;opacity:1!important}
+[data-testid="stAlert"] [data-testid="stAlertContainer"]{background:var(--aa-surface)!important;border:1px solid var(--aa-border)}
+[data-testid="stAlert"] *{color:var(--aa-text)!important}
+[data-testid="stExpander"] summary{background:var(--aa-surface)!important}
+[data-testid="stExpander"] details{background:var(--aa-surface);border:1px solid var(--aa-border)!important;border-radius:12px}
+.stApp h1{width:fit-content;background:linear-gradient(90deg,var(--aa-text) 30%,var(--aa-accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent!important;font-weight:800}
+/* tabs (new react-aria markup + older baseweb markup) */
+[data-testid="stTabs"] [data-orientation="horizontal"]{border-bottom:none!important;box-shadow:none!important}
+[data-testid="stTabs"] [role="tablist"]{gap:6px;padding:6px;background:var(--aa-surface);border:1px solid var(--aa-border)!important;border-radius:16px}
+[role="tab"]{flex:1;justify-content:center;height:auto;padding:9px 14px;border-radius:11px;transition:background .15s}
+[role="tab"] p{font-weight:600;font-size:.95rem}
+[role="tab"]:hover{background:color-mix(in srgb,var(--aa-accent) 14%,transparent)}
+[role="tab"][aria-selected="true"]{background:var(--aa-accent)!important}
+[role="tab"][aria-selected="true"] :is(p,span,div){color:var(--aa-on)!important}
+.react-aria-SelectionIndicator,[data-baseweb="tab-highlight"],[data-baseweb="tab-border"]{display:none!important}
+[role="tabpanel"]{padding-top:18px}
+/* buttons */
+button[kind="primary"],[data-testid="stBaseButton-primary"]{background:var(--aa-accent)!important;border:1px solid var(--aa-accent)!important}
+button[kind="primary"] *,[data-testid="stBaseButton-primary"] *{color:var(--aa-on)!important}
+button[kind="secondary"],[data-testid="stBaseButton-secondary"]{background:var(--aa-surface)!important;border:1px solid var(--aa-border)!important;transition:border-color .15s}
+button[kind="secondary"]:hover,[data-testid="stBaseButton-secondary"]:hover{border-color:var(--aa-accent)!important}
+/* chat */
+[data-testid="stChatInput"]{background:var(--aa-surface);border:1px solid var(--aa-border);border-radius:14px}
+[data-testid="stChatInput"],[data-testid="stChatInput"]>div,[data-testid="stChatInput"] [data-baseweb]{background:var(--aa-surface)!important}
+[data-testid="stChatInput"] textarea{background:transparent!important;color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
+[data-testid="stChatInput"] textarea::placeholder{color:var(--aa-muted)!important;-webkit-text-fill-color:var(--aa-muted);opacity:1}
+[data-testid="stBottom"]>div,[data-testid="stBottomBlockContainer"]{background:var(--aa-bg)}
+[data-testid="stChatMessage"]{background:var(--aa-surface);border:1px solid var(--aa-border);border-radius:14px}
+[data-baseweb="input"],[data-baseweb="base-input"]{background:var(--aa-surface)!important}
+[data-baseweb="input"] input{color:var(--aa-text)!important;-webkit-text-fill-color:var(--aa-text)}
+/* cards */
+.aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:4px 0 18px}
+.aa-card,.aa-link{border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-surface);transition:transform .15s,box-shadow .15s,border-color .15s}
+.aa-card:hover,.aa-link:hover{transform:translateY(-2px);box-shadow:0 8px 22px color-mix(in srgb,var(--aa-accent) 18%,transparent);border-color:var(--aa-accent)}
+.aa-card{padding:18px;display:flex;flex-direction:column;gap:10px}
+.aa-title{font-size:1.1rem;font-weight:650;line-height:1.3;color:var(--aa-text)}
+.aa-tag{font-size:.78rem;color:var(--aa-muted);margin-top:-6px}
+.aa-desc{font-size:.9rem;line-height:1.55;flex:1;color:var(--aa-text);opacity:.92}
 .aa-pills{display:flex;flex-wrap:wrap;gap:6px}
-.aa-pill{font-size:.72rem;padding:2px 9px;border-radius:999px;background:rgba(10,122,111,.12);color:#0a7a6f;border:1px solid rgba(10,122,111,.25)}
+.aa-pill{font-size:.72rem;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--aa-accent) 14%,transparent);color:var(--aa-accent)!important;border:1px solid color-mix(in srgb,var(--aa-accent) 30%,transparent)}
 .aa-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
-.aa-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(128,128,128,.35);font-size:.82rem;text-decoration:none!important;color:inherit!important;transition:border-color .15s,color .15s}
-.aa-btn:hover{border-color:#0a7a6f;color:#0a7a6f!important}
-.aa-btn.primary{background:#0a7a6f;border-color:#0a7a6f;color:#fff!important}
-.aa-btn.primary:hover{opacity:.9;color:#fff!important}
-.aa-link{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid rgba(128,128,128,.28);border-radius:14px;background:rgba(128,128,128,.04);text-decoration:none!important;color:inherit!important;transition:transform .15s,box-shadow .15s,border-color .15s}
-.aa-link:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08);border-color:#0a7a6f}
-.aa-link .aa-ico{width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;background:rgba(128,128,128,.1)}
-.aa-link .aa-name{font-weight:600;font-size:.98rem}
-.aa-link .aa-sub{font-size:.78rem;opacity:.65;word-break:break-all}
-</style>
+.aa-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--aa-border);font-size:.82rem;text-decoration:none!important;color:var(--aa-text)!important;transition:border-color .15s,color .15s}
+.aa-btn:hover{border-color:var(--aa-accent);color:var(--aa-accent)!important}
+.aa-btn.primary{background:var(--aa-accent);border-color:var(--aa-accent);color:var(--aa-on)!important}
+.aa-btn.primary:hover{opacity:.9;color:var(--aa-on)!important}
+.aa-link{display:flex;align-items:center;gap:14px;padding:14px 16px;text-decoration:none!important;color:var(--aa-text)!important}
+.aa-link .aa-ico{width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--aa-text) 8%,transparent);color:var(--aa-text)}
+.aa-link .aa-name{font-weight:600;font-size:.98rem;color:var(--aa-text)}
+.aa-link .aa-sub{font-size:.78rem;color:var(--aa-muted);word-break:break-all}
 """
 
 
@@ -225,7 +278,7 @@ def icon_svg(name: str, size: int = 22) -> str:
     else:
         return ""
     return (
-        f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="{fill}" '
+        f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" style="fill:{fill}" '
         f'aria-hidden="true"><path d="{path}"/></svg>'
     )
 
@@ -242,14 +295,6 @@ def pretty_url(url: str) -> str:
 
 def external(url: str) -> str:
     return "" if url.startswith(("mailto:", "tel:")) else ' target="_blank" rel="noopener noreferrer"'
-
-
-def icon_row(links) -> str:
-    items = "".join(
-        f'<a class="aa-ico-link" href="{esc(u)}"{external(u)} title="{esc(n)}" aria-label="{esc(n)}">{icon_svg(n)}</a>'
-        for n, u in links
-    )
-    return f'<div class="aa-row">{items}</div>'
 
 
 def link_cards(links) -> str:
@@ -296,14 +341,15 @@ def certification_cards(certs) -> str:
 
 
 # ---------- main ----------
-st.markdown(CSS, unsafe_allow_html=True)
+if st.session_state.get("theme") not in THEMES:
+    st.session_state.theme = st.query_params.get("theme", DEFAULT_THEME)
+    if st.session_state.theme not in THEMES:
+        st.session_state.theme = DEFAULT_THEME
+st.markdown(theme_css(st.session_state.theme), unsafe_allow_html=True)
 st.title("Ask Arpit")
 st.caption("A first-round screen, on demand. Every answer comes straight from his resume.")
 
 _links = [(n, u) for n, u in LINKS if u and "YOUR_" not in u]
-if _links:
-    st.markdown(icon_row(_links), unsafe_allow_html=True)
-
 _tabs = ["💬 Chat", "🚀 Projects", "🔗 Links"] + (["🏅 Certifications"] if CERTIFICATIONS else [])
 tab_chat, tab_projects, tab_links, *tab_certs = st.tabs(_tabs)
 
@@ -396,3 +442,11 @@ with st.sidebar:
                 help=f"{c['message_count'] // 2} questions",
             )
             b.button("✕", key=f"del-{sid}", on_click=delete_chat, args=(sid,), help="Delete chat")
+
+    st.divider()
+    with st.expander("🎨 Theme", expanded=False):
+        st.radio(
+            "Color theme", list(THEMES), key="theme",
+            format_func=lambda k: THEMES[k][0], label_visibility="collapsed",
+        )
+        st.query_params["theme"] = st.session_state.theme
