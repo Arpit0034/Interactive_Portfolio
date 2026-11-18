@@ -17,6 +17,24 @@ STARTERS = [
     "What is your educational background?",
 ]
 
+# Social links. Leave a value empty ("") to hide that button.
+# LinkedIn and email come from the resume; fill in the other three with your usernames.
+LINKS = [
+    ("LinkedIn", "https://www.linkedin.com/in/arpit-kandari-71b726293"),
+    ("GitHub", "https://github.com/Arpit0034"),
+    ("GeeksforGeeks", "https://www.geeksforgeeks.org/user/YOUR_GFG_USERNAME/"),
+    ("HackerRank", "https://www.hackerrank.com/profile/YOUR_HACKERRANK_USERNAME"),
+    ("LeetCode", "https://leetcode.com/u/Myth001/"),
+    ("Email", "mailto:arpitk1105@gmail.com"),
+    ("Phone", "tel:+917668115878"),
+]
+# Certifications: (name, issuer and year, credential link or "").
+# Example: ("Java Programming Masterclass", "Udemy · 2025", "https://www.udemy.com/certificate/UC-xxxx/")
+CERTIFICATIONS = [
+]
+RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"  # lives in backend/
+LINK_ICONS = {"GitHub": "🐙", "LinkedIn": "🔗", "GeeksforGeeks": "🌱", "HackerRank": "💻", "LeetCode": "🧩", "Email": "✉️", "Phone": "📞"}
+
 st.set_page_config(page_title="Ask Arpit", page_icon="💬", layout="centered")
 
 
@@ -137,43 +155,116 @@ def stream_answer(question: str):
             st.session_state.turns = ev["turns_used"]
 
 
+# ---------- projects ----------
+PROJECTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projects.json")
+
+
+@st.cache_data
+def load_projects():
+    try:
+        with open(PROJECTS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
+def readme_url(github_url: str):
+    """Repo URL -> README anchor. Profile URLs (no repo) have no README."""
+    parts = [p for p in github_url.replace("https://github.com/", "").split("/") if p]
+    return f"{github_url.rstrip('/')}#readme" if len(parts) >= 2 else None
+
+
+def project_card(p: dict):
+    with st.container(border=True):
+        st.subheader(p["name"])
+        if p.get("tag"):
+            st.caption(p["tag"])
+        st.write(p.get("description", ""))
+        if p.get("stack"):
+            st.markdown(" ".join(f"`{t}`" for t in p["stack"]))
+        buttons = []
+        if p.get("github"):
+            buttons.append(("💻 Code", p["github"]))
+            if readme_url(p["github"]):
+                buttons.append(("📖 README", readme_url(p["github"])))
+        for live in p.get("live", []):
+            buttons.append((f"🌐 {live['label']}", live["url"]))
+        for i in range(0, len(buttons), 2):
+            for col, (label, url) in zip(st.columns(2), buttons[i:i + 2]):
+                col.link_button(label, url, use_container_width=True)
+
+
 # ---------- main ----------
 st.title("Ask Arpit")
 st.caption("A first-round screen, on demand. Every answer comes straight from his resume.")
 
-if "flash" in st.session_state:
-    st.warning(st.session_state.pop("flash"))
+_links = [(n, u) for n, u in LINKS if u and "YOUR_" not in u]
+_tabs = ["💬 Chat", "🚀 Projects", "🔗 Links"] + (["🏅 Certifications"] if CERTIFICATIONS else [])
+tab_chat, tab_projects, tab_links, *tab_certs = st.tabs(_tabs)
 
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.markdown(m["content"])
+with tab_projects:
+    projects = load_projects()
+    if not projects:
+        st.info("Projects will show up here.")
+    for i in range(0, len(projects), 2):
+        for col, p in zip(st.columns(2), projects[i:i + 2]):
+            with col:
+                project_card(p)
 
-if not st.session_state.messages:
-    st.write("")
-    for s in STARTERS:
-        st.button(s, key=f"starter-{s}", on_click=use_starter, args=(s,), use_container_width=True)
+with tab_links:
+    for i in range(0, len(_links), 3):
+        for col, (name, url) in zip(st.columns(3), _links[i:i + 3]):
+            col.link_button(f"{LINK_ICONS.get(name, '🔗')} {name}", url, use_container_width=True)
+    _resume_path = os.path.join(BACKEND_DIR, RESUME_FILE)
+    if os.path.exists(_resume_path):
+        with open(_resume_path, "rb") as f:
+            st.download_button(
+                "📄 Download resume (PDF)", f.read(), file_name=RESUME_FILE,
+                mime="application/pdf", use_container_width=True,
+            )
 
-full = st.session_state.turns >= MAX_TURNS
-if full:
-    st.info(f"This chat reached its {MAX_TURNS}-question limit. Start a new chat to keep asking.")
+if tab_certs:
+    with tab_certs[0]:
+        for name, issuer, url in CERTIFICATIONS:
+            with st.container(border=True):
+                st.markdown(f"**{name}**  \n{issuer}")
+                if url:
+                    st.link_button("View credential", url)
 
-typed = st.chat_input("Ask about experience, skills, projects…", max_chars=MAX_CHARS, disabled=full)
-question = typed or st.session_state.pop("pending", None)
+with tab_chat:
+    if "flash" in st.session_state:
+        st.warning(st.session_state.pop("flash"))
 
-if question and not full:
-    with st.chat_message("user"):
-        st.markdown(question)
-    with st.chat_message("assistant"):
-        try:
-            answer = st.write_stream(stream_answer(question))
-        except ApiError as e:
-            st.error(str(e))
-        else:
-            if answer:
-                st.session_state.messages += [
-                    {"role": "user", "content": question},
-                    {"role": "assistant", "content": answer},
-                ]
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            st.markdown(m["content"])
+
+    if not st.session_state.messages:
+        st.write("")
+        for s in STARTERS:
+            st.button(s, key=f"starter-{s}", on_click=use_starter, args=(s,), use_container_width=True)
+
+    full = st.session_state.turns >= MAX_TURNS
+    if full:
+        st.info(f"This chat reached its {MAX_TURNS}-question limit. Start a new chat to keep asking.")
+
+    typed = st.chat_input("Ask about experience, skills, projects…", max_chars=MAX_CHARS, disabled=full)
+    question = typed or st.session_state.pop("pending", None)
+
+    if question and not full:
+        with st.chat_message("user"):
+            st.markdown(question)
+        with st.chat_message("assistant"):
+            try:
+                answer = st.write_stream(stream_answer(question))
+            except ApiError as e:
+                st.error(str(e))
+            else:
+                if answer:
+                    st.session_state.messages += [
+                        {"role": "user", "content": question},
+                        {"role": "assistant", "content": answer},
+                    ]
 
 # ---------- sidebar (drawn last so a new chat shows up right away) ----------
 with st.sidebar:

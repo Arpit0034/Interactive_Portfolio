@@ -1,0 +1,54 @@
+[
+  {
+    "name": "LinkedIn Clone",
+    "tag": "Distributed microservices",
+    "description": "7-service platform (gateway, user, connections, posts, uploader, notifications, Eureka) with a database per service. The social graph lives in Neo4j, Kafka decouples notifications across 5 topics, and Kubernetes manifests make it GKE-deployable.",
+    "stack": ["Spring Boot", "Spring Cloud Gateway", "Eureka", "Kafka", "Neo4j", "PostgreSQL", "OpenFeign", "Docker", "Kubernetes", "JWT"],
+    "github": "https://github.com/Arpit0034/LinkedInMicroservice",
+    "live": []
+  },
+  {
+    "name": "JobChain",
+    "tag": "Hackathon · team of 4 · built in 36 hours",
+    "description": "Blockchain-secured exam management. Papers, answer keys and scores are anchored on Polygon as SHA-256 hashes, so tampering is publicly detectable. Includes marks-anomaly and answer-leak fraud engines.",
+    "stack": ["Solidity", "Spring Boot", "Web3j", "Polygon Amoy", "PostgreSQL", "React", "Tailwind", "JWT"],
+    "github": "https://github.com/Arpit0034/Winter_Hackathon_Team_Frost",
+    "live": []
+  },
+  {
+    "name": "Hotel Booking Platform",
+    "tag": "Multi-module REST API",
+    "description": "Dynamic pricing engine built with the Decorator pattern (base, surge, occupancy, urgency, holiday). Double-booking prevented with pessimistic row locks and a 10-minute soft reservation. Full Stripe flow with 3-tier RBAC.",
+    "stack": ["Spring Boot", "PostgreSQL", "Stripe", "Spring Security", "JWT", "Docker", "Swagger"],
+    "github": "https://github.com/Arpit0034",
+    "live": []
+  },
+  {
+    "name": "Course Search API",
+    "tag": "Elasticsearch engine",
+    "description": "8-parameter filter API with fuzzy search and real-time autocomplete. Fully containerized with Docker Compose and auto-indexes on boot.",
+    "stack": ["Spring Boot", "Elasticsearch", "Docker Compose"],
+    "github": "https://github.com/Arpit0034/Course_Search_App",
+    "live": []
+  },
+  {
+    "name": "Anemia Detection",
+    "tag": "Two-stage ML system",
+    "description": "Detection plus WHO-based severity classification on 9,468 patient records. Random Forest reached 99.72% recall on the held-out set and 97.12% on an independent dataset. Deployed in an Android app.",
+    "stack": ["Python", "scikit-learn", "SMOTE", "Random Forest", "SVM", "Android"],
+    "github": "",
+    "live": []
+  },
+  {
+    "name": "SkyVidya & Nawani Tours",
+    "tag": "Freelance client websites",
+    "description": "Responsive websites built and deployed for two paying clients. Both are live and maintained.",
+    "stack": ["HTML", "CSS", "JavaScript"],
+    "github": "",
+    "live": [
+      {"label": "SkyVidya", "url": "https://skyvidya.com"},
+      {"label": "SkyVidya Store", "url": "https://store.skyvidya.com"},
+      {"label": "Nawani Tours", "url": "https://nawanitoursandtravels.netlify.app"}
+    ]
+  }
+]
