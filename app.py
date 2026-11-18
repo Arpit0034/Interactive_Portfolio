@@ -17,6 +17,24 @@ STARTERS = [
     "What is your educational background?",
 ]
 
+# Social links. Leave a value empty ("") to hide that button.
+# LinkedIn and email come from the resume; fill in the other three with your usernames.
+LINKS = [
+    ("LinkedIn", "https://www.linkedin.com/in/arpit-kandari-71b726293"),
+    ("GitHub", "https://github.com/Arpit0034"),
+    ("GeeksforGeeks", "https://www.geeksforgeeks.org/user/YOUR_GFG_USERNAME/"),
+    ("HackerRank", "https://www.hackerrank.com/profile/YOUR_HACKERRANK_USERNAME"),
+    ("LeetCode", "https://leetcode.com/u/Myth001/"),
+    ("Email", "mailto:arpitk1105@gmail.com"),
+    ("Phone", "tel:+917668115878"),
+]
+# Certifications: (name, issuer and year, credential link or "").
+# Example: ("Java Programming Masterclass", "Udemy · 2025", "https://www.udemy.com/certificate/UC-xxxx/")
+CERTIFICATIONS = [
+]
+RESUME_FILE = "Arpit_Kandari_Resume_Updated.pdf"  # lives in backend/
+LINK_ICONS = {"GitHub": "🐙", "LinkedIn": "🔗", "GeeksforGeeks": "🌱", "HackerRank": "💻", "LeetCode": "🧩", "Email": "✉️", "Phone": "📞"}
+
 st.set_page_config(page_title="Ask Arpit", page_icon="💬", layout="centered")
 
 
@@ -140,6 +158,25 @@ def stream_answer(question: str):
 # ---------- main ----------
 st.title("Ask Arpit")
 st.caption("A first-round screen, on demand. Every answer comes straight from his resume.")
+
+_links = [(n, u) for n, u in LINKS if u and "YOUR_" not in u]
+for i in range(0, len(_links), 3):
+    row = _links[i:i + 3]
+    for col, (name, url) in zip(st.columns(3), row):
+        col.link_button(f"{LINK_ICONS.get(name, '🔗')} {name}", url, use_container_width=True)
+
+_resume_path = os.path.join(BACKEND_DIR, RESUME_FILE)
+if os.path.exists(_resume_path):
+    with open(_resume_path, "rb") as f:
+        st.download_button(
+            "📄 Download resume (PDF)", f.read(), file_name=RESUME_FILE,
+            mime="application/pdf", use_container_width=True,
+        )
+
+if CERTIFICATIONS:
+    with st.expander(f"🏅 Certifications ({len(CERTIFICATIONS)})"):
+        for name, issuer, url in CERTIFICATIONS:
+            st.markdown(f"**{name}**  \n{issuer}" + (f" · [View credential]({url})" if url else ""))
 
 if "flash" in st.session_state:
     st.warning(st.session_state.pop("flash"))
