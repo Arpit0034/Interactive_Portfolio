@@ -78,7 +78,7 @@
     "name": "SkyVidya & Nawani Tours",
     "tag": "Freelance client websites",
     "description": "Responsive websites built and deployed for two paying clients. Both are live and maintained.",
-    "stack": ["HTML", "CSS", "JavaScript"],
+    "stack": ["HTML", "CSS", "JavaScript","React","Cloudinary","Tailwind CSS","Postgres","Spring Boot","Maven","JWT","GCP"],
     "github": "",
     "live": [
       { "label": "SkyVidya", "url": "https://skyvidya.com" },

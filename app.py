@@ -32,25 +32,11 @@ STARTERS = [
 
 # Social links. Leave a value empty ("") to hide that button.
 # LinkedIn and email come from the resume; fill in the other three with your usernames.
-LINKS = [
-    ("LinkedIn", "https://www.linkedin.com/in/arpit-kandari-71b726293"),
-    ("GitHub", "https://github.com/Arpit0034"),
-    ("GeeksforGeeks", "https://www.geeksforgeeks.org/profile/arpitk995i?tab=activity"),
-    ("HackerRank", "https://www.hackerrank.com/profile/Arpit0987"),
-    ("LeetCode", "https://leetcode.com/u/Myth001/"),
-    ("Email", "mailto:arpitk1105@gmail.com"),
-    ("Phone", "tel:+917668115878"),
-]
-# Certifications: (name, issuer and year, credential link or "").
-# Example: ("Java Programming Masterclass", "Udemy · 2025", "https://www.udemy.com/certificate/UC-xxxx/")
-CERTIFICATIONS = [
-    ("Certicate of Accomplishment Problem Solving (Basic)", "HackerRank · 2024", "https://www.hackerrank.com/certificates/02ca6263258c"),
-    ("Java Online Course", "GeeksforGeeks· 2025", "https://media.geeksforgeeks.org/courses/certificates/b7ebdcef809bc1a79f67cfa55890b5bc.pdf"),
-    ("Python Essential 1", "Cisco Networking Academy · 2025", "https://www.credly.com/badges/c07ecf2d-2ce9-4a41-9072-5c618b078261/public_url"),
-    ("Spring Boot Course", "Scaler · 2025", "https://moonshot.scaler.com/s/sl/0vzlxrFU4t"),
-    ("Spring Boot 0 - 1 - Beginner", "Coding Shuttle · 2025", "https://drive.google.com/file/d/1AJpA0gh2NItimcaoip_f3cVCGAU7O_2J/view?usp=drive_link"),
-    ("Spring Boot 1 - 100 - Expert", "Coding Shuttle · 2026", "https://drive.google.com/file/d/1PKSHdRm3FGJPU8jeI9DsJpSXZM23X7EV/view?usp=drive_link"),
-]
+PROFILE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profile.json")
+with open(PROFILE_FILE, encoding="utf-8") as _f:
+    _profile = json.load(_f)
+LINKS = [tuple(x) for x in _profile["links"]]
+CERTIFICATIONS = [tuple(x) for x in _profile["certifications"]]
 
 st.set_page_config(
     page_title="Ask Arpit",

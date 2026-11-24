@@ -271,6 +271,32 @@ CANNED_ANSWERS = {
     "tell me about the projects you are proudest of": PROJECTS_ANSWER,
 }
 
+PROFILE_PATH = Path(__file__).resolve().parent.parent / "profile.json"
+
+
+def profile_context() -> str:
+    """Links and certifications from profile.json, appended to the system prompt."""
+    try:
+        data = json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    out = []
+    if data.get("links"):
+        out.append(
+            "Profile and contact links:\n"
+            + "\n".join(f"- {n}: {u}" for n, u in data["links"])
+        )
+    if data.get("certifications"):
+        out.append(
+            "Certifications (with credential links):\n"
+            + "\n".join(f"- {n} ({issuer}): {url}" for n, issuer, url in data["certifications"])
+        )
+    out.append(
+        "Website sections: this site has Chat, Projects, Links and Certifications tabs. "
+        "The resume PDF can be downloaded with the 'Download resume (PDF)' button in the Links tab."
+    )
+    return "\n\n".join(out)
+
 
 def canned_answer(question: str) -> str | None:
     key = re.sub(r"[^a-z0-9 ]", "", question.lower()).strip()
@@ -286,6 +312,7 @@ Below is everything you know about the candidate.
 General skills (NOT tied to any specific project): {", ".join(resume.skills)}
 
 {projects_context()}
+{profile_context()}
 
 Rules:
 1. Answer only using this information. Never hallucinate.
@@ -315,6 +342,13 @@ Rules:
 12. When asked about several projects, give 1-2 sentences per project using
    only that project's own description and stack, and finish every project
    you start. This overrides rule 7's sentence count.
+13. If asked for the resume, CV, LinkedIn, GitHub, contact details,
+   certificates or credentials, answer from the links and certifications
+   above. For the resume file, tell them to open the Links tab and use the
+   "Download resume (PDF)" button.
+14. You cannot attach or display files yourself. Never say you lack
+   information when the answer is in the links, certifications, projects
+   or website sections above.
 """
 
 
