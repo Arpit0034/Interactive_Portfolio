@@ -3,7 +3,18 @@
     "name": "LinkedIn Clone",
     "tag": "Distributed microservices",
     "description": "7-service platform (gateway, user, connections, posts, uploader, notifications, Eureka) with a database per service. The social graph lives in Neo4j, Kafka decouples notifications across 5 topics, and Kubernetes manifests make it GKE-deployable.",
-    "stack": ["Spring Boot", "Spring Cloud Gateway", "Eureka", "Kafka", "Neo4j", "PostgreSQL", "OpenFeign", "Docker", "Kubernetes", "JWT"],
+    "stack": [
+      "Spring Boot",
+      "Spring Cloud Gateway",
+      "Eureka",
+      "Kafka",
+      "Neo4j",
+      "PostgreSQL",
+      "OpenFeign",
+      "Docker",
+      "Kubernetes",
+      "JWT"
+    ],
     "github": "https://github.com/Arpit0034/LinkedInMicroservice",
     "live": []
   },
@@ -11,7 +22,16 @@
     "name": "JobChain",
     "tag": "Hackathon · team of 4 · built in 36 hours",
     "description": "Blockchain-secured exam management. Papers, answer keys and scores are anchored on Polygon as SHA-256 hashes, so tampering is publicly detectable. Includes marks-anomaly and answer-leak fraud engines.",
-    "stack": ["Solidity", "Spring Boot", "Web3j", "Polygon Amoy", "PostgreSQL", "React", "Tailwind", "JWT"],
+    "stack": [
+      "Solidity",
+      "Spring Boot",
+      "Web3j",
+      "Polygon Amoy",
+      "PostgreSQL",
+      "React",
+      "Tailwind",
+      "JWT"
+    ],
     "github": "https://github.com/Arpit0034/Winter_Hackathon_Team_Frost",
     "live": []
   },
@@ -19,7 +39,15 @@
     "name": "Hotel Booking Platform",
     "tag": "Multi-module REST API",
     "description": "Dynamic pricing engine built with the Decorator pattern (base, surge, occupancy, urgency, holiday). Double-booking prevented with pessimistic row locks and a 10-minute soft reservation. Full Stripe flow with 3-tier RBAC.",
-    "stack": ["Spring Boot", "PostgreSQL", "Stripe", "Spring Security", "JWT", "Docker", "Swagger"],
+    "stack": [
+      "Spring Boot",
+      "PostgreSQL",
+      "Stripe",
+      "Spring Security",
+      "JWT",
+      "Docker",
+      "Swagger"
+    ],
     "github": "https://github.com/Arpit0034",
     "live": []
   },
@@ -35,7 +63,14 @@
     "name": "Anemia Detection",
     "tag": "Two-stage ML system",
     "description": "Detection plus WHO-based severity classification on 9,468 patient records. Random Forest reached 99.72% recall on the held-out set and 97.12% on an independent dataset. Deployed in an Android app.",
-    "stack": ["Python", "scikit-learn", "SMOTE", "Random Forest", "SVM", "Android"],
+    "stack": [
+      "Python",
+      "scikit-learn",
+      "SMOTE",
+      "Random Forest",
+      "SVM",
+      "Android"
+    ],
     "github": "",
     "live": []
   },
@@ -46,9 +81,60 @@
     "stack": ["HTML", "CSS", "JavaScript"],
     "github": "",
     "live": [
-      {"label": "SkyVidya", "url": "https://skyvidya.com"},
-      {"label": "SkyVidya Store", "url": "https://store.skyvidya.com"},
-      {"label": "Nawani Tours", "url": "https://nawanitoursandtravels.netlify.app"}
+      { "label": "SkyVidya", "url": "https://skyvidya.com" },
+      { "label": "SkyVidya Store", "url": "https://store.skyvidya.com" },
+      {
+        "label": "Nawani Tours",
+        "url": "https://nawanitoursandtravels.netlify.app"
+      },
+      {
+        "label": "Skyvidya Erp",
+        "url": "https://skyvidya-erp-568733114199.asia-south1.run.app/"
+      }
+    ]
+  },
+  {
+    "name": "Resume Screener",
+    "tag": "Solo project · LLM-assisted hiring tool",
+    "description": "A tool that ranks candidates against a job description. The user pastes a job posting and uploads resumes (PDF, DOCX or TXT). The Groq API extracts structured data from the job description and each resume, and a deterministic Python scorer then matches required and preferred skills, handles skill aliases, and applies an experience penalty, so scores are reproducible. Results show the matched and missing skills for each candidate and can be downloaded as CSV. The code includes rate-limit retries and pytest unit tests.",
+    "stack": [
+      "Python",
+      "Streamlit",
+      "Groq API",
+      "Pydantic",
+      "pandas",
+      "pypdf",
+      "python-docx",
+      "pytest"
+    ],
+    "github": "https://github.com/Arpit0034/YOUR-RESUME-SCREENER-REPO",
+    "live": [
+      { "label": "Live demo", "url": "https://resumes-screener.streamlit.app/" }
+    ]
+  },
+  {
+    "name": "DSA Debugging Lab",
+    "tag": "Solo project · Interactive learning platform",
+    "description": "A browser-based platform for learning data structures and algorithms by debugging code. Each of its 250+ problems, across 24 topics in Java, Python and C, shows buggy code: you select the faulty lines, type the fixes and state the time and space complexity, and the app checks them against accepted answers. Practice modes include topic, random, weak-areas, interview, unsolved, bookmarked and timed challenges, with a countdown that depends on difficulty. A step-by-step algorithm visualizer animates problem solutions. A concepts hub offers a searchable library, complexity tables, side-by-side comparisons and a pattern finder. A concept-practice mode generates multiple-choice questions with an AI model and grades the user's recorded spoken explanations. An analytics dashboard tracks streaks, weekly activity, accuracy by topic, difficulty and language, weak topics and the most-missed bug categories. Progress, bookmarks and settings are stored in the browser and can be exported and imported as JSON. The 'Ask AI' feature uses the user's own API key, with input limits, rate limiting, and prompt-injection and off-topic guards.",
+    "stack": [
+      "React",
+      "TypeScript",
+      "Vite",
+      "Tailwind CSS",
+      "CodeMirror",
+      "Recharts",
+      "React Router",
+      "Vitest",
+      "OpenRouter API",
+      "Gemini API",
+      "Groq API"
+    ],
+    "github": "https://github.com/Arpit0034/Debug_Lab",
+    "live": [
+      {
+        "label": "Live demo",
+        "url": "https://dsa-debugging-lab-app.vercel.app/"
+      }
     ]
   }
 ]
