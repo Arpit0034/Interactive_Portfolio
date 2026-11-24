@@ -365,7 +365,10 @@ button[kind="secondary"]:hover,[data-testid="stBaseButton-secondary"]:hover{bord
 .aa-more{margin-top:6px}
 .aa-more summary{cursor:pointer;font-weight:600;color:var(--aa-accent);list-style:none;text-align:left}
 .aa-more summary::-webkit-details-marker{display:none}
-.aa-more[open] summary{display:none}
+.aa-more .aa-less{display:none}
+.aa-more[open] .aa-less{display:inline}
+.aa-more[open] .aa-readmore{display:none}
+.aa-more[open] summary{margin-bottom:4px}
 .aa-pills{display:flex;flex-wrap:wrap;gap:6px}
 .aa-pill{font-size:.72rem;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--aa-accent) 14%,transparent);color:var(--aa-accent)!important;border:1px solid color-mix(in srgb,var(--aa-accent) 30%,transparent)}
 .aa-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
@@ -510,7 +513,7 @@ def desc_html(text: str, limit: int = 230) -> str:
     head, tail = text[:cut].strip(), text[cut:].strip()
     return (
         f'<div class="aa-desc">{esc(head)}'
-        f'<details class="aa-more"><summary>Read more…</summary>{esc(tail)}</details></div>'
+        f'<details class="aa-more"><summary><span class="aa-readmore">Read more…</span><span class="aa-less">Show less ▲</span></summary>{esc(tail)}</details></div>'
     )
 
 def project_cards(projects) -> str:
