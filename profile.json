@@ -15,5 +15,6 @@
     ["Spring Boot Course", "Scaler · 2025", "https://moonshot.scaler.com/s/sl/0vzlxrFU4t"],
     ["Spring Boot 0 - 1 - Beginner", "Coding Shuttle · 2025", "https://drive.google.com/file/d/1AJpA0gh2NItimcaoip_f3cVCGAU7O_2J/view?usp=drive_link"],
     ["Spring Boot 1 - 100 - Expert", "Coding Shuttle · 2026", "https://drive.google.com/file/d/1PKSHdRm3FGJPU8jeI9DsJpSXZM23X7EV/view?usp=drive_link"]
-  ]
+  ],
+  "career_interests": "I am targeting backend engineering roles, mainly Java and Spring Boot. I am most interested in microservices, event-driven systems with Kafka, search with Elasticsearch, and blockchain-backed applications. I am also interested in applying ML to healthcare, as in my anemia detection project."
 }

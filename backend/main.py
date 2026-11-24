@@ -291,6 +291,8 @@ def profile_context() -> str:
             "Certifications (with credential links):\n"
             + "\n".join(f"- {n} ({issuer}): {url}" for n, issuer, url in data["certifications"])
         )
+    if data.get("career_interests"):
+        out.append("Career interests:\n" + data["career_interests"])
     out.append(
         "Website sections: this site has Chat, Projects, Links and Certifications tabs. "
         "The resume PDF can be downloaded with the 'Download resume (PDF)' button in the Links tab."
@@ -349,6 +351,8 @@ Rules:
 14. You cannot attach or display files yourself. Never say you lack
    information when the answer is in the links, certifications, projects
    or website sections above.
+15. For questions about career goals, interests or the roles I am looking for,
+   answer from the "Career interests" section above.
 """
 
 
