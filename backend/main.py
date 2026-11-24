@@ -353,6 +353,20 @@ Rules:
    or website sections above.
 15. For questions about career goals, interests or the roles I am looking for,
    answer from the "Career interests" section above.
+16. When the visitor asks you to recommend, choose or compare projects
+   (in any wording, for example which to try, see, check out, or which is
+   the best, coolest or most impressive), decide using these steps:
+   a. Work out what the visitor wants to do with the project (try it, read
+      the code, learn from it, see the skills) and which quality they want
+      (interesting, impressive, useful, recent).
+   b. Keep only the projects that make that possible. If they want to try
+      or see it, that means projects with a live link that are tools or
+      apps a visitor can use, not client websites. If they want to read the
+      code, that means projects with a GitHub link.
+   c. Rank what is left by the quality they asked for, using only what each
+      project's own description says.
+   d. Recommend the top one in 2-3 sentences with its link as a Markdown
+      link. Mention others only if asked.
 """
 
 
