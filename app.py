@@ -529,11 +529,12 @@ def project_cards(projects) -> str:
             )
         cards.append(
             '<div class="aa-card">'
-            f'<div class="aa-title">{esc(p["name"])}</div>'
+            + f'<div class="aa-title">{esc(p["name"])}</div>'
             + (f'<div class="aa-tag">{esc(p["tag"])}</div>' if p.get("tag") else "")
             + desc_html(p.get("description", ""))
-            f'<div class="aa-pills">{pills}</div>'
-            f'<div class="aa-actions">{"".join(btns)}</div></div>'
+            + f'<div class="aa-pills">{pills}</div>'
+            + f'<div class="aa-actions">{"".join(btns)}</div>'
+            + '</div>'
         )
     return f'<div class="aa-grid">{"".join(cards)}</div>'
 
