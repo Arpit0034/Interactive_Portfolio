@@ -355,13 +355,17 @@ button[kind="secondary"]:hover,[data-testid="stBaseButton-secondary"]:hover{bord
 [data-testid="stBottomBlockContainer"]{max-width:760px!important;margin-inline:auto;padding:0 20px!important}
 
 /* cards */
-.aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:16px;margin:4px 0 18px}
+.aa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px;margin:4px 0 18px;align-items:start}
 .aa-card,.aa-link{border:1px solid var(--aa-border);border-radius:16px;background:var(--aa-surface);transition:border-color .15s,box-shadow .15s}
 .aa-card:hover,.aa-link:hover{border-color:var(--aa-accent);box-shadow:0 8px 22px color-mix(in srgb,var(--aa-accent) 18%,transparent)}
 .aa-card{padding:16px;display:flex;flex-direction:column;gap:10px}
 .aa-title{font-size:1.1rem;font-weight:650;line-height:1.3;color:var(--aa-text)}
 .aa-tag{font-size:.78rem;color:var(--aa-muted);margin-top:-4px}
-.aa-desc{font-size:.9rem;line-height:1.55;flex:1;color:var(--aa-text);opacity:.92}
+.aa-desc{font-size:.9rem;line-height:1.6;flex:1;color:var(--aa-text);opacity:.92;text-align:justify;text-justify:inter-word;hyphens:auto;overflow-wrap:break-word}
+.aa-more{margin-top:6px}
+.aa-more summary{cursor:pointer;font-weight:600;color:var(--aa-accent);list-style:none;text-align:left}
+.aa-more summary::-webkit-details-marker{display:none}
+.aa-more[open] summary{display:none}
 .aa-pills{display:flex;flex-wrap:wrap;gap:6px}
 .aa-pill{font-size:.72rem;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--aa-accent) 14%,transparent);color:var(--aa-accent)!important;border:1px solid color-mix(in srgb,var(--aa-accent) 30%,transparent)}
 .aa-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
@@ -493,6 +497,21 @@ def link_cards(links) -> str:
     )
     return f'<div class="aa-grid">{items}</div>'
 
+def desc_html(text: str, limit: int = 230) -> str:
+    """Short visible description, the rest behind a 'Read more' toggle."""
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return f'<div class="aa-desc">{esc(text)}</div>'
+    cut = text.rfind(". ", 0, limit)
+    if cut < 80:
+        cut = text.rfind(" ", 0, limit)
+    else:
+        cut += 1
+    head, tail = text[:cut].strip(), text[cut:].strip()
+    return (
+        f'<div class="aa-desc">{esc(head)}'
+        f'<details class="aa-more"><summary>Read more…</summary>{esc(tail)}</details></div>'
+    )
 
 def project_cards(projects) -> str:
     cards = []
@@ -512,7 +531,7 @@ def project_cards(projects) -> str:
             '<div class="aa-card">'
             f'<div class="aa-title">{esc(p["name"])}</div>'
             + (f'<div class="aa-tag">{esc(p["tag"])}</div>' if p.get("tag") else "")
-            + f'<div class="aa-desc">{esc(p.get("description", ""))}</div>'
+            + desc_html(p.get("description", ""))
             f'<div class="aa-pills">{pills}</div>'
             f'<div class="aa-actions">{"".join(btns)}</div></div>'
         )
